@@ -17,6 +17,21 @@
 </head>
 <body data-theme="dark">
 
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-chapters" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M5 6l1 14a2 2 0 002 2h8a2 2 0 002-2l1-14M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-skipback" viewBox="0 0 24 24"><path d="M19 20L9 12l10-8v16zM5 19V5"/></symbol>
+  <symbol id="i-rewind" viewBox="0 0 24 24"><path d="M11 19l-7-7 7-7v14zM20 19l-7-7 7-7v14z"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8.5 5.4v13.2l10.8-6.6z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></symbol>
+</svg>
+
 <div id="screen-library" class="screen">
   <header class="lib-head">
     <h1>Вспышка</h1>
@@ -24,36 +39,36 @@
   </header>
   <div id="install-hint" class="hint hidden">
     <span>Установи как приложение: Safari → <b>Поделиться</b> → <b>На экран «Домой»</b></span>
-    <button id="btn-hint-close" class="icon-btn">✕</button>
+    <button id="btn-hint-close" class="icon-btn" aria-label="Скрыть подсказку"><svg class="icon"><use href="#i-close"/></svg></button>
   </div>
   <div id="lib-empty" class="empty">
-    <div class="empty-icon">⚡</div>
+    <svg class="icon empty-icon"><use href="#i-zap"/></svg>
     <p>Закинь книгу — и читай со скоростью мысли.</p>
     <p class="formats">EPUB · FB2 · FB2.ZIP · TXT · DOCX · RTF · PDF · HTML · MD</p>
-    <button id="btn-demo" class="ctl demo-btn">Попробовать демо-текст</button>
+    <button id="btn-demo" class="ctl demo-btn"><svg class="icon"><use href="#i-zap"/></svg>Попробовать демо-текст</button>
   </div>
   <div id="book-list"></div>
-  <button id="btn-import" class="fab">＋ Книга</button>
+  <button id="btn-import" class="fab"><svg class="icon"><use href="#i-plus"/></svg>Книга</button>
   <input id="file-input" type="file" multiple hidden
     accept=".epub,.fb2,.zip,.txt,.md,.markdown,.html,.htm,.rtf,.docx,.pdf,.mobi,.azw,.azw3,text/plain,application/epub+zip,application/pdf">
 </div>
 
 <div id="screen-reader" class="screen hidden">
   <header class="reader-top">
-    <button id="btn-back" class="icon-btn" title="В библиотеку">‹</button>
+    <button id="btn-back" class="icon-btn" aria-label="В библиотеку"><svg class="icon"><use href="#i-back"/></svg></button>
     <div class="book-titles">
       <div id="reader-title"></div>
       <div id="reader-chapter"></div>
     </div>
-    <button id="btn-chapters" class="icon-btn" title="Главы">☰</button>
+    <button id="btn-chapters" class="icon-btn" aria-label="Главы" aria-haspopup="dialog"><svg class="icon"><use href="#i-chapters"/></svg></button>
   </header>
 
   <div id="stage">
-    <div id="recent" title="Недавние слова — тапни, чтобы вернуться"></div>
+    <div id="recent" aria-label="Недавние слова — нажмите, чтобы вернуться"></div>
     <div id="word-wrap">
-      <div class="focus-line"></div>
-      <div id="word"><span id="w-left"></span><span id="w-pivot"></span><span id="w-right"></span></div>
-      <div class="focus-line"></div>
+      <div class="focus-line" aria-hidden="true"></div>
+      <div id="word" aria-live="off"><span id="w-left"></span><span id="w-pivot"></span><span id="w-right"></span></div>
+      <div class="focus-line" aria-hidden="true"></div>
     </div>
     <div id="stage-hint">тап — продолжить</div>
   </div>
@@ -61,32 +76,37 @@
   <div class="controls">
     <div class="progress-row">
       <span id="pos-label" class="mono"></span>
-      <input id="progress" type="range" min="0" max="0" value="0" step="1">
+      <input id="progress" type="range" min="0" max="0" value="0" step="1" aria-label="Позиция в книге">
       <span id="pct-label" class="mono"></span>
     </div>
     <div class="buttons-row">
-      <button id="btn-prev-par" class="ctl small">⏮<small>абзац</small></button>
-      <button id="btn-prev-sent" class="ctl small">⏮<small>предл.</small></button>
-      <button id="btn-play" class="ctl play">▶</button>
-      <button id="btn-settings" class="ctl small">⚙<small>настр.</small></button>
+      <button id="btn-prev-par" class="ctl small" aria-label="На абзац назад"><svg class="icon"><use href="#i-rewind"/></svg><small>абзац</small></button>
+      <button id="btn-prev-sent" class="ctl small" aria-label="На предложение назад"><svg class="icon"><use href="#i-skipback"/></svg><small>предл.</small></button>
+      <button id="btn-play" class="ctl play" data-state="paused" aria-label="Продолжить" aria-pressed="false">
+        <svg class="icon fill ic-play"><use href="#i-play"/></svg>
+        <svg class="icon fill ic-pause"><use href="#i-pause"/></svg>
+      </button>
+      <button id="btn-settings" class="ctl small" aria-label="Настройки" aria-haspopup="dialog"><svg class="icon"><use href="#i-sliders"/></svg><small>настр.</small></button>
     </div>
     <div class="wpm-row">
       <span class="lbl">Скорость</span>
-      <input id="wpm" type="range" min="100" max="900" step="10" value="300">
+      <input id="wpm" type="range" min="100" max="900" step="10" value="300" aria-label="Скорость, слов в минуту">
       <span id="wpm-label" class="mono"></span>
     </div>
   </div>
 
-  <div id="drawer-chapters" class="drawer hidden">
-    <div class="drawer-head"><span>Главы</span><button class="drawer-close icon-btn">✕</button></div>
+  <div id="drawer-chapters" class="drawer hidden" role="dialog" aria-label="Главы">
+    <div class="drawer-head"><span>Главы</span><button class="drawer-close icon-btn" aria-label="Закрыть"><svg class="icon"><use href="#i-close"/></svg></button></div>
     <div id="chapter-list" class="drawer-body"></div>
   </div>
 
-  <div id="drawer-settings" class="drawer hidden">
-    <div class="drawer-head"><span>Настройки</span><button class="drawer-close icon-btn">✕</button></div>
+  <div id="drawer-settings" class="drawer hidden" role="dialog" aria-label="Настройки">
+    <div class="drawer-head"><span>Настройки</span><button class="drawer-close icon-btn" aria-label="Закрыть"><svg class="icon"><use href="#i-close"/></svg></button></div>
     <div class="drawer-body settings">
       <label>Размер слова <span id="set-font-label" class="mono"></span>
         <input id="set-font" type="range" min="24" max="72" step="2"></label>
+      <label>Шрифт слова
+        <select id="set-wordfont"><option value="serif">С засечками (книжный)</option><option value="sans">Без засечек</option></select></label>
       <label>Тема
         <select id="set-theme"><option value="dark">Тёмная</option><option value="light">Светлая</option></select></label>
       <label>Пауза в конце предложения <span id="set-sentence-label" class="mono"></span>
@@ -101,7 +121,7 @@
 
   <div id="overlay" class="hidden">
     <div class="overlay-card">
-      <div class="overlay-emoji">🎉</div>
+      <div class="overlay-emoji" aria-hidden="true">🎉</div>
       <h2>Книга дочитана!</h2>
       <div class="overlay-buttons">
         <button id="btn-restart" class="ctl">В начало</button>
@@ -111,7 +131,7 @@
   </div>
 </div>
 
-<div id="toast" class="hidden"></div>
+<div id="toast" class="hidden" role="status" aria-live="polite"></div>
 
 <script src="vendor/jszip.min.js"></script>
 <script src="engine.js"></script>

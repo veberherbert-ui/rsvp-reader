@@ -7,7 +7,7 @@
     meta: null, chapters: null, words: [], starts: [],
     idx: 0, playing: false, timer: null, wpm: 300,
     recent: [], wakeLock: null, scrubbing: false,
-    settings: { font: 40, theme: 'dark', sentence: 2.2, paragraph: 2.8, comma: 1.6, recent: true }
+    settings: { font: 40, theme: 'dark', sentence: 2.2, paragraph: 2.8, comma: 1.6, recent: true, wordfont: 'serif' }
   };
 
   // ---------- настройки ----------
@@ -27,6 +27,8 @@
     $('set-paragraph').value = S.settings.paragraph; $('set-paragraph-label').textContent = '×' + S.settings.paragraph;
     $('set-comma').value = S.settings.comma; $('set-comma-label').textContent = '×' + S.settings.comma;
     $('set-recent').checked = S.settings.recent;
+    $('set-wordfont').value = S.settings.wordfont;
+    document.documentElement.style.setProperty('--word-font', S.settings.wordfont === 'sans' ? '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' : 'Georgia, "Times New Roman", serif');
   }
 
   // ---------- тост ----------
@@ -35,9 +37,14 @@
     const t = $('toast');
     t.textContent = msg;
     t.classList.toggle('error', !!isErr);
-    t.classList.remove('hidden');
+    t.classList.remove('hidden', 'out', 'show');
+    void t.offsetWidth;
+    t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.classList.add('hidden'); }, isErr ? 5000 : 2500);
+    toastTimer = setTimeout(function () {
+      t.classList.add('out');
+      setTimeout(function () { t.classList.add('hidden'); t.classList.remove('out', 'show'); }, 180);
+    }, isErr ? 5000 : 2500);
   }
 
   // ---------- библиотека ----------
@@ -63,13 +70,16 @@
       const pctEl = document.createElement('div'); pctEl.className = 'book-pct'; pctEl.textContent = pct + '%';
       info.append(h, sub, bar, pctEl);
       const del = document.createElement('button');
-      del.className = 'book-del'; del.textContent = '✕'; del.title = 'Удалить';
+      del.className = 'book-del'; del.setAttribute('aria-label', 'Удалить книгу');
+      del.innerHTML = '<svg class="icon"><use href="#i-trash"/></svg>';
       del.addEventListener('click', async function (ev) {
         ev.stopPropagation();
         if (confirm('Удалить «' + meta.title + '»?')) { await St.deleteBook(meta.id); renderLibrary(); }
       });
       card.append(info, del);
       card.addEventListener('click', function () { openBook(meta); });
+      card.classList.add('enter');
+      card.style.animationDelay = Math.min(list.children.length * 100, 500) + 'ms';
       list.appendChild(card);
     }
   }
@@ -212,7 +222,7 @@
     if (!S.words.length) return;
     if (S.idx >= S.words.length) seek(0);
     S.playing = true;
-    $('btn-play').textContent = '⏸';
+    setPlayState(true);
     $('stage-hint').textContent = 'тап — пауза';
     clearTimeout(S.timer);
     tick();
@@ -220,13 +230,19 @@
   }
   function pause() {
     S.playing = false;
-    $('btn-play').textContent = '▶';
+    setPlayState(false);
     $('stage-hint').textContent = 'тап — продолжить';
     clearTimeout(S.timer);
     if (S.wakeLock) { try { S.wakeLock.release(); } catch (e) {} S.wakeLock = null; }
     saveProgress();
   }
   function toggle() { S.playing ? pause() : play(); }
+  function setPlayState(on) {
+    const b = $('btn-play');
+    b.dataset.state = on ? 'playing' : 'paused';
+    b.setAttribute('aria-pressed', String(on));
+    b.setAttribute('aria-label', on ? 'Пауза' : 'Продолжить');
+  }
 
   function finish() {
     pause();
@@ -255,9 +271,55 @@
     renderLibrary();
   }
 
+  function openDrawer(el) {
+    el.classList.remove('hidden', 'closing');
+    requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.add('open'); }); });
+  }
+  function closeDrawer(el) {
+    if (el.classList.contains('hidden')) return;
+    el.classList.remove('open', 'dragging');
+    el.classList.add('closing');
+    el.style.transform = ''; el.style.opacity = '';
+    let done = false;
+    const finish = function () {
+      if (done) return; done = true;
+      el.classList.add('hidden'); el.classList.remove('closing');
+      el.removeEventListener('transitionend', finish);
+    };
+    el.addEventListener('transitionend', finish);
+    setTimeout(finish, 320);
+  }
   function closeDrawers() {
-    $('drawer-chapters').classList.add('hidden');
-    $('drawer-settings').classList.add('hidden');
+    closeDrawer($('drawer-chapters'));
+    closeDrawer($('drawer-settings'));
+  }
+  // drag-to-dismiss: тянем заголовок вниз, отпускаем за половину — закрывается (Kinetics)
+  function bindDrawerDrag(el) {
+    const head = el.querySelector('.drawer-head');
+    let dragging = false, startY = 0, dy = 0, t0 = 0, h = 1;
+    head.addEventListener('pointerdown', function (e) {
+      if (e.target.closest('button')) return;
+      dragging = true; startY = e.clientY; dy = 0; t0 = performance.now(); h = el.offsetHeight || 1;
+      el.classList.add('dragging');
+      head.setPointerCapture(e.pointerId);
+    });
+    head.addEventListener('pointermove', function (e) {
+      if (!dragging) return;
+      dy = Math.max(0, e.clientY - startY);
+      el.style.transform = 'translateY(' + dy + 'px)';
+      el.style.opacity = String(Math.max(0.4, 1 - dy / h));
+    });
+    const up = function () {
+      if (!dragging) return;
+      dragging = false;
+      const v = dy / Math.max(1, performance.now() - t0);
+      el.classList.remove('dragging');
+      el.style.transform = ''; el.style.opacity = '';
+      if (dy > h * 0.5 || v > 0.5) closeDrawer(el);
+      dy = 0;
+    };
+    head.addEventListener('pointerup', up);
+    head.addEventListener('pointercancel', up);
   }
 
   function curBase() { return S.playing ? Math.max(0, S.idx - 1) : S.idx; }
@@ -296,22 +358,33 @@
     });
 
     $('btn-chapters').addEventListener('click', function () {
-      $('drawer-settings').classList.add('hidden');
-      $('drawer-chapters').classList.toggle('hidden');
+      closeDrawer($('drawer-settings'));
+      const d = $('drawer-chapters');
+      if (d.classList.contains('open')) closeDrawer(d); else openDrawer(d);
       const act = $('chapter-list').querySelector('.active');
-      if (act) act.scrollIntoView({ block: 'center' });
+      if (act) setTimeout(function () { act.scrollIntoView({ block: 'center' }); }, 60);
     });
     $('btn-settings').addEventListener('click', function () {
-      $('drawer-chapters').classList.add('hidden');
-      $('drawer-settings').classList.toggle('hidden');
+      closeDrawer($('drawer-chapters'));
+      const d = $('drawer-settings');
+      if (d.classList.contains('open')) closeDrawer(d); else openDrawer(d);
     });
+    bindDrawerDrag($('drawer-chapters'));
+    bindDrawerDrag($('drawer-settings'));
     document.querySelectorAll('.drawer-close').forEach(function (b) { b.addEventListener('click', closeDrawers); });
 
     $('set-font').addEventListener('input', function (ev) {
       S.settings.font = +ev.target.value; St.setSetting('set:font', S.settings.font); applySettings();
     });
     $('set-theme').addEventListener('change', function (ev) {
-      S.settings.theme = ev.target.value; St.setSetting('set:theme', S.settings.theme); applySettings();
+      S.settings.theme = ev.target.value; St.setSetting('set:theme', S.settings.theme);
+      document.body.classList.add('no-transitions');
+      applySettings();
+      void document.body.offsetWidth;
+      requestAnimationFrame(function () { requestAnimationFrame(function () { document.body.classList.remove('no-transitions'); }); });
+    });
+    $('set-wordfont').addEventListener('change', function (ev) {
+      S.settings.wordfont = ev.target.value; St.setSetting('set:wordfont', S.settings.wordfont); applySettings();
     });
     [['set-sentence', 'sentence'], ['set-paragraph', 'paragraph'], ['set-comma', 'comma']].forEach(function (pair) {
       $(pair[0]).addEventListener('input', function (ev) {
@@ -330,6 +403,7 @@
 
     document.addEventListener('keydown', function (e) {
       if ($('screen-reader').classList.contains('hidden')) return;
+      if (e.key === 'Escape') { closeDrawers(); return; }
       if (e.code === 'Space') { e.preventDefault(); toggle(); }
       else if (e.key === 'ArrowLeft') seek(R.prevSentence(S.words, curBase()));
       else if (e.key === 'ArrowRight') {
