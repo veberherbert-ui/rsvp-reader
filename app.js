@@ -3,7 +3,7 @@
   const R = window.RsvpEngine, P = window.BookParsers, St = window.Store;
   const $ = function (id) { return document.getElementById(id); };
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  const APP_VERSION = 'v7';
+  const APP_VERSION = 'v8';
   const FONTS = { serif: 'Georgia, "Times New Roman", serif', sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' };
 
   const S = {
@@ -161,23 +161,55 @@
     const t = w.t;
     const o = R.pivotIndex(t);
     const wordEl = $('word');
+    const wrap = $('word-wrap');
+    const L = $('w-left'), Pv = $('w-pivot'), Rt = $('w-right');
+    wrap.style.setProperty('--cond', '1');
     wordEl.style.fontSize = S.settings.font + 'px';
-    $('w-left').textContent = t.slice(0, o);
-    $('w-pivot').textContent = t[o] || '';
-    $('w-right').textContent = t.slice(o + 1);
-    // авто-кегль по фактической ширине: итеративно уменьшаем, пока слово не влезет;
-    // фокус-буква остаётся ровно по центру (сетка 1fr auto 1fr)
-    let fitSize = S.settings.font;
-    for (let k = 0; k < 4; k++) {
+    L.textContent = t.slice(0, o);
+    Pv.textContent = t[o] || '';
+    Rt.textContent = t.slice(o + 1);
+    // подгонка длинных слов: лёгкий кегль → конденсация → сдвиг фокуса; переносов нет
+    const availW = wordEl.clientWidth;
+    if (availW > 0) {
+      const half = availW / 2 - 6;
       void wordEl.offsetWidth;
-      const needW = $('w-left').offsetWidth + $('w-pivot').offsetWidth + $('w-right').offsetWidth;
-      const availW = wordEl.clientWidth;
-      if (needW <= availW || availW <= 0 || fitSize <= 12) break;
-      fitSize = Math.max(12, Math.floor(fitSize * availW / needW * 0.98));
-      wordEl.style.fontSize = fitSize + 'px';
+      let lw = L.offsetWidth, pw = Pv.offsetWidth, rw = Rt.offsetWidth;
+      let cond = 1;
+      if (Math.max(lw, rw) > half) {
+        // 1) лёгкий кегль — не более чем до 85%
+        const size = Math.max(Math.round(S.settings.font * 0.85), Math.floor(S.settings.font * half / Math.max(lw, rw)));
+        wordEl.style.fontSize = size + 'px';
+        void wordEl.offsetWidth;
+        lw = L.offsetWidth; pw = Pv.offsetWidth; rw = Rt.offsetWidth;
+        // 2) лёгкая конденсация — не более чем до 0.85; остаток компенсирует сдвиг фокуса ниже
+        cond = Math.min(1, Math.max(0.85, half / Math.max(lw, rw)));
+        if (cond < 1) {
+          wrap.style.setProperty('--cond', String(cond));
+          lw *= cond; rw *= cond;
+        }
+        // 3) патологически длинные (шире экрана даже так): дожимаем кегль как последний шаг
+        if (lw + pw + rw > availW - 4) {
+          const size2 = Math.max(10, Math.floor(parseFloat(wordEl.style.fontSize) * (availW - 4) / (lw + pw + rw)));
+          wordEl.style.fontSize = size2 + 'px';
+          wrap.style.setProperty('--cond', '1'); cond = 1;
+          void wordEl.offsetWidth;
+          lw = L.offsetWidth; pw = Pv.offsetWidth; rw = Rt.offsetWidth;
+          cond = Math.min(1, Math.max(0.85, half / Math.max(lw, rw)));
+          if (cond < 1) {
+            wrap.style.setProperty('--cond', String(cond));
+            lw *= cond; rw *= cond;
+          }
+        }
+      }
+      // точка фокуса: центр, но не даём краям слова выйти за экран
+      const ph = pw / 2;
+      let x = availW / 2;
+      const minX = lw + ph + 2, maxX = availW - rw - ph - 2;
+      if (x < minX) x = minX;
+      if (x > maxX) x = maxX;
+      wrap.style.setProperty('--px', x + 'px');
+      wrap.style.setProperty('--ph', ph + 'px');
     }
-    void wordEl.offsetWidth;
-    wordEl.style.setProperty('--ph', ($('w-pivot').offsetWidth / 2) + 'px');
     if (S.playing && S.settings.smooth === 'soft' && !reduceMotion.matches && $('word').animate) {
       const d = R.delayMs(w, S.words[i + 1], S.wpm, S.settings);
       const fade = Math.max(40, Math.min(110, Math.round(d * 0.35)));

@@ -102,17 +102,19 @@ body {
 #recent::-webkit-scrollbar { display: none; }
 #recent span { white-space: nowrap; cursor: pointer; }
 #word-wrap { padding: 18px 0; }
-.focus-line { width: 2px; height: 12px; background: var(--pivot); margin: 0 auto; opacity: .8; }
+.focus-line { width: 2px; height: 12px; background: var(--pivot); opacity: .8; position: relative; left: var(--px, 50%); transform: translateX(-50%); }
+@media (prefers-reduced-motion: no-preference) { .focus-line { transition: left .18s ease-out; } }
 /* слово НЕ анимируется на смене — это высокочастотный контент (better-motion) */
 #word {
   position: relative; height: 1.5em; white-space: nowrap;
   font-size: var(--word-size); font-weight: 600; line-height: 1.5;
   font-family: var(--word-font);
 }
-/* фокус-буква всегда ровно в центре экрана; половины слова расходятся от неё */
-#w-left { position: absolute; top: 0; right: calc(50% + var(--ph, 0px)); }
-#w-pivot { position: absolute; top: 0; left: 50%; transform: translateX(-50%); color: var(--pivot); }
-#w-right { position: absolute; top: 0; left: calc(50% + var(--ph, 0px)); }
+/* фокус-буква в центре; у очень длинных слов точка фокуса сдвигается, чтобы слово влезло.
+   Половины слова могут конденсироваться (scaleX) — высота букв не меняется */
+#w-left { position: absolute; top: 0; right: calc(100% - var(--px, 50%) + var(--ph, 0px)); transform-origin: right center; transform: scaleX(var(--cond, 1)); }
+#w-pivot { position: absolute; top: 0; left: var(--px, 50%); transform: translateX(-50%); color: var(--pivot); }
+#w-right { position: absolute; top: 0; left: calc(var(--px, 50%) + var(--ph, 0px)); transform-origin: left center; transform: scaleX(var(--cond, 1)); }
 
 .controls {
   border-top: 1px solid var(--line); background: var(--surface);

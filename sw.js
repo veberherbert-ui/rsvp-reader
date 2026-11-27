@@ -1,4 +1,4 @@
-const VERSION = 'vspyshka-v7';
+const VERSION = 'vspyshka-v8';
 const ASSETS = [
   './', './index.html', './style.css', './app.js', './engine.js', './parsers.js', './store.js',
   './manifest.webmanifest',
