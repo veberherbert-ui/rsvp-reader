@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Вспышка — скорочтение</title>
+<meta name="description" content="RSVP-ридер: книги любых форматов по одному слову с подсветкой точки фокуса">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Вспышка">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="dark">
+
+<div id="screen-library" class="screen">
+  <header class="lib-head">
+    <h1>Вспышка</h1>
+    <p class="tagline">скорочтение · слово за словом</p>
+  </header>
+  <div id="install-hint" class="hint hidden">
+    <span>Установи как приложение: Safari → <b>Поделиться</b> → <b>На экран «Домой»</b></span>
+    <button id="btn-hint-close" class="icon-btn">✕</button>
+  </div>
+  <div id="lib-empty" class="empty">
+    <div class="empty-icon">⚡</div>
+    <p>Закинь книгу — и читай со скоростью мысли.</p>
+    <p class="formats">EPUB · FB2 · FB2.ZIP · TXT · DOCX · RTF · PDF · HTML · MD</p>
+    <button id="btn-demo" class="ctl demo-btn">Попробовать демо-текст</button>
+  </div>
+  <div id="book-list"></div>
+  <button id="btn-import" class="fab">＋ Книга</button>
+  <input id="file-input" type="file" multiple hidden
+    accept=".epub,.fb2,.zip,.txt,.md,.markdown,.html,.htm,.rtf,.docx,.pdf,.mobi,.azw,.azw3,text/plain,application/epub+zip,application/pdf">
+</div>
+
+<div id="screen-reader" class="screen hidden">
+  <header class="reader-top">
+    <button id="btn-back" class="icon-btn" title="В библиотеку">‹</button>
+    <div class="book-titles">
+      <div id="reader-title"></div>
+      <div id="reader-chapter"></div>
+    </div>
+    <button id="btn-chapters" class="icon-btn" title="Главы">☰</button>
+  </header>
+
+  <div id="stage">
+    <div id="recent" title="Недавние слова — тапни, чтобы вернуться"></div>
+    <div id="word-wrap">
+      <div class="focus-line"></div>
+      <div id="word"><span id="w-left"></span><span id="w-pivot"></span><span id="w-right"></span></div>
+      <div class="focus-line"></div>
+    </div>
+    <div id="stage-hint">тап — продолжить</div>
+  </div>
+
+  <div class="controls">
+    <div class="progress-row">
+      <span id="pos-label" class="mono"></span>
+      <input id="progress" type="range" min="0" max="0" value="0" step="1">
+      <span id="pct-label" class="mono"></span>
+    </div>
+    <div class="buttons-row">
+      <button id="btn-prev-par" class="ctl small">⏮<small>абзац</small></button>
+      <button id="btn-prev-sent" class="ctl small">⏮<small>предл.</small></button>
+      <button id="btn-play" class="ctl play">▶</button>
+      <button id="btn-settings" class="ctl small">⚙<small>настр.</small></button>
+    </div>
+    <div class="wpm-row">
+      <span class="lbl">Скорость</span>
+      <input id="wpm" type="range" min="100" max="900" step="10" value="300">
+      <span id="wpm-label" class="mono"></span>
+    </div>
+  </div>
+
+  <div id="drawer-chapters" class="drawer hidden">
+    <div class="drawer-head"><span>Главы</span><button class="drawer-close icon-btn">✕</button></div>
+    <div id="chapter-list" class="drawer-body"></div>
+  </div>
+
+  <div id="drawer-settings" class="drawer hidden">
+    <div class="drawer-head"><span>Настройки</span><button class="drawer-close icon-btn">✕</button></div>
+    <div class="drawer-body settings">
+      <label>Размер слова <span id="set-font-label" class="mono"></span>
+        <input id="set-font" type="range" min="24" max="72" step="2"></label>
+      <label>Тема
+        <select id="set-theme"><option value="dark">Тёмная</option><option value="light">Светлая</option></select></label>
+      <label>Пауза в конце предложения <span id="set-sentence-label" class="mono"></span>
+        <input id="set-sentence" type="range" min="1" max="4" step="0.2"></label>
+      <label>Пауза между абзацами <span id="set-paragraph-label" class="mono"></span>
+        <input id="set-paragraph" type="range" min="1" max="5" step="0.2"></label>
+      <label>Пауза на запятых <span id="set-comma-label" class="mono"></span>
+        <input id="set-comma" type="range" min="1" max="3" step="0.1"></label>
+      <label class="check">Лента недавних слов <input id="set-recent" type="checkbox"></label>
+    </div>
+  </div>
+
+  <div id="overlay" class="hidden">
+    <div class="overlay-card">
+      <div class="overlay-emoji">🎉</div>
+      <h2>Книга дочитана!</h2>
+      <div class="overlay-buttons">
+        <button id="btn-restart" class="ctl">В начало</button>
+        <button id="btn-to-lib" class="ctl">В библиотеку</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="hidden"></div>
+
+<script src="vendor/jszip.min.js"></script>
+<script src="engine.js"></script>
+<script src="parsers.js"></script>
+<script src="store.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
