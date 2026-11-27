@@ -3,7 +3,7 @@
   const R = window.RsvpEngine, P = window.BookParsers, St = window.Store;
   const $ = function (id) { return document.getElementById(id); };
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  const APP_VERSION = 'v6';
+  const APP_VERSION = 'v7';
   const FONTS = { serif: 'Georgia, "Times New Roman", serif', sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' };
 
   const S = {
@@ -501,7 +501,17 @@
     if (ios && !navigator.standalone && !St.getSetting('hintDismissed', false)) $('install-hint').classList.remove('hidden');
     if (/[?&]demo=1/.test(location.search)) openDemo();
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname))) {
-      navigator.serviceWorker.register('sw.js').catch(function () {});
+      const hadController = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        // новый воркер взял управление — перезагружаемся в свежую версию
+        if (hadController) location.reload();
+      });
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (reg) {
+        setInterval(function () { reg.update().catch(function () {}); }, 30 * 60 * 1000);
+        document.addEventListener('visibilitychange', function () {
+          if (!document.hidden) reg.update().catch(function () {});
+        });
+      }).catch(function () {});
     }
   }
   document.addEventListener('DOMContentLoaded', init);
