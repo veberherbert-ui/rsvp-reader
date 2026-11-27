@@ -124,6 +124,7 @@ body {
 .lbl { font-size: 12px; color: var(--text-2); white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; }
 input[type="range"] { accent-color: var(--solid); height: 28px; }
 .buttons-row { display: flex; justify-content: center; align-items: center; gap: var(--sp-4); }
+.ctl, .icon-btn, .fab, .book-del { touch-action: manipulation; }
 .ctl {
   background: var(--surface-2); color: var(--text); border: 1px solid var(--line);
   border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); font-size: 16px;
@@ -152,7 +153,7 @@ input[type="range"] { accent-color: var(--solid); height: 28px; }
   transition: transform .4s var(--spring), opacity .3s ease-out;
   overscroll-behavior: contain;
 }
-.drawer.open { transform: translateY(0); opacity: 1; }
+.drawer.open { transform: none; opacity: 1; }
 .drawer.closing { transition: transform .2s cubic-bezier(0.4, 0, 1, 1), opacity .18s ease-out; }
 .drawer.dragging { transition: none; }
 .drawer-head {
@@ -242,3 +243,5 @@ body.no-transitions, body.no-transitions * { transition: none !important; }
   @keyframes toast-fade { from { opacity: 0; } to { opacity: 1; } }
   @keyframes toast-fade-out { to { opacity: 0; } }
 }
+
+.controls, .drawer-head { -webkit-user-select: none; user-select: none; }

@@ -2,12 +2,13 @@
   'use strict';
   const R = window.RsvpEngine, P = window.BookParsers, St = window.Store;
   const $ = function (id) { return document.getElementById(id); };
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
   const S = {
     meta: null, chapters: null, words: [], starts: [],
-    idx: 0, playing: false, timer: null, wpm: 300,
+    idx: 0, playing: false, timer: null, nextAt: 0, wpm: 300,
     recent: [], wakeLock: null, scrubbing: false,
-    settings: { font: 40, theme: 'dark', sentence: 2.2, paragraph: 2.8, comma: 1.6, recent: true, wordfont: 'serif' }
+    settings: { font: 40, theme: 'dark', sentence: 2.2, paragraph: 2.8, comma: 1.6, recent: true, wordfont: 'serif', smooth: 'soft' }
   };
 
   // ---------- настройки ----------
@@ -16,10 +17,14 @@
     Object.keys(S.settings).forEach(function (k) { S.settings[k] = St.getSetting('set:' + k, S.settings[k]); });
     applySettings();
   }
-  function applySettings() {
+  function applyVisual() {
     document.body.dataset.theme = S.settings.theme;
     document.documentElement.style.setProperty('--word-size', S.settings.font + 'px');
+    document.documentElement.style.setProperty('--word-font', S.settings.wordfont === 'sans' ? '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' : 'Georgia, "Times New Roman", serif');
     $('recent').classList.toggle('hidden', !S.settings.recent);
+  }
+  function applySettings() {
+    applyVisual();
     $('wpm').value = S.wpm; $('wpm-label').textContent = S.wpm + ' сл/мин';
     $('set-font').value = S.settings.font; $('set-font-label').textContent = S.settings.font + 'px';
     $('set-theme').value = S.settings.theme;
@@ -28,7 +33,7 @@
     $('set-comma').value = S.settings.comma; $('set-comma-label').textContent = '×' + S.settings.comma;
     $('set-recent').checked = S.settings.recent;
     $('set-wordfont').value = S.settings.wordfont;
-    document.documentElement.style.setProperty('--word-font', S.settings.wordfont === 'sans' ? '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' : 'Georgia, "Times New Roman", serif');
+    $('set-smooth').value = S.settings.smooth;
   }
 
   // ---------- тост ----------
@@ -155,6 +160,14 @@
     $('w-left').textContent = t.slice(0, o);
     $('w-pivot').textContent = t[o] || '';
     $('w-right').textContent = t.slice(o + 1);
+    if (S.playing && S.settings.smooth === 'soft' && !reduceMotion.matches && $('word').animate) {
+      const d = R.delayMs(w, S.words[i + 1], S.wpm, S.settings);
+      const fade = Math.max(40, Math.min(110, Math.round(d * 0.35)));
+      try {
+        $('word').getAnimations().forEach(function (a) { a.cancel(); });
+        $('word').animate([{ opacity: 0.2 }, { opacity: 1 }], { duration: fade, easing: 'ease-out' });
+      } catch (e) {}
+    }
     const chEl = $('reader-chapter');
     const chTitle = (S.chapters[w.ch] || {}).title || '';
     if (chEl.textContent !== chTitle) {
@@ -202,7 +215,7 @@
     updatePos();
     saveProgress();
     clearTimeout(S.timer);
-    if (S.playing) S.timer = setTimeout(tick, 400);
+    if (S.playing) { S.nextAt = performance.now() + 400; S.timer = setTimeout(tick, 400); }
   }
 
   function tick() {
@@ -215,7 +228,9 @@
     S.idx++;
     updatePos();
     if (S.idx % 20 === 0) saveProgress();
-    S.timer = setTimeout(tick, d);
+    const now = performance.now();
+    S.nextAt = Math.max(S.nextAt + d, now + 16);
+    S.timer = setTimeout(tick, S.nextAt - now);
   }
 
   async function play() {
@@ -225,6 +240,7 @@
     setPlayState(true);
     $('stage-hint').textContent = 'тап — пауза';
     clearTimeout(S.timer);
+    S.nextAt = performance.now();
     tick();
     try { if (navigator.wakeLock) S.wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
   }
@@ -354,7 +370,7 @@
       S.wpm = +ev.target.value;
       $('wpm-label').textContent = S.wpm + ' сл/мин';
       St.setSetting('wpm', S.wpm);
-      if (S.playing) { clearTimeout(S.timer); S.timer = setTimeout(tick, 60000 / S.wpm); }
+      if (S.playing) { clearTimeout(S.timer); S.nextAt = performance.now() + 60000 / S.wpm; S.timer = setTimeout(tick, 60000 / S.wpm); }
     });
 
     $('btn-chapters').addEventListener('click', function () {
@@ -374,7 +390,9 @@
     document.querySelectorAll('.drawer-close').forEach(function (b) { b.addEventListener('click', closeDrawers); });
 
     $('set-font').addEventListener('input', function (ev) {
-      S.settings.font = +ev.target.value; St.setSetting('set:font', S.settings.font); applySettings();
+      S.settings.font = +ev.target.value; St.setSetting('set:font', S.settings.font);
+      applyVisual();
+      $('set-font-label').textContent = S.settings.font + 'px';
     });
     $('set-theme').addEventListener('change', function (ev) {
       S.settings.theme = ev.target.value; St.setSetting('set:theme', S.settings.theme);
@@ -384,15 +402,20 @@
       requestAnimationFrame(function () { requestAnimationFrame(function () { document.body.classList.remove('no-transitions'); }); });
     });
     $('set-wordfont').addEventListener('change', function (ev) {
-      S.settings.wordfont = ev.target.value; St.setSetting('set:wordfont', S.settings.wordfont); applySettings();
+      S.settings.wordfont = ev.target.value; St.setSetting('set:wordfont', S.settings.wordfont); applyVisual();
     });
     [['set-sentence', 'sentence'], ['set-paragraph', 'paragraph'], ['set-comma', 'comma']].forEach(function (pair) {
       $(pair[0]).addEventListener('input', function (ev) {
-        S.settings[pair[1]] = +ev.target.value; St.setSetting('set:' + pair[1], S.settings[pair[1]]); applySettings();
+        S.settings[pair[1]] = +ev.target.value; St.setSetting('set:' + pair[1], S.settings[pair[1]]);
+        $(pair[0] + '-label').textContent = '×' + S.settings[pair[1]];
       });
     });
     $('set-recent').addEventListener('change', function (ev) {
-      S.settings.recent = ev.target.checked; St.setSetting('set:recent', S.settings.recent); applySettings();
+      S.settings.recent = ev.target.checked; St.setSetting('set:recent', S.settings.recent);
+      $('recent').classList.toggle('hidden', !S.settings.recent);
+    });
+    $('set-smooth').addEventListener('change', function (ev) {
+      S.settings.smooth = ev.target.value; St.setSetting('set:smooth', S.settings.smooth);
     });
 
     $('btn-restart').addEventListener('click', function () { seek(0); play(); });
