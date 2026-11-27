@@ -112,7 +112,6 @@ body {
 #w-left { justify-self: end; }
 #w-pivot { color: var(--pivot); }
 #w-right { justify-self: start; }
-#stage-hint { text-align: center; color: var(--text-2); font-size: 12px; min-height: 20px; opacity: .8; }
 
 .controls {
   border-top: 1px solid var(--line); background: var(--surface);

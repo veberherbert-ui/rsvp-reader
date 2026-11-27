@@ -238,7 +238,6 @@
     if (S.idx >= S.words.length) seek(0);
     S.playing = true;
     setPlayState(true);
-    $('stage-hint').textContent = 'тап — пауза';
     clearTimeout(S.timer);
     S.nextAt = performance.now();
     tick();
@@ -247,7 +246,6 @@
   function pause() {
     S.playing = false;
     setPlayState(false);
-    $('stage-hint').textContent = 'тап — продолжить';
     clearTimeout(S.timer);
     if (S.wakeLock) { try { S.wakeLock.release(); } catch (e) {} S.wakeLock = null; }
     saveProgress();
@@ -358,10 +356,6 @@
 
     $('btn-back').addEventListener('click', backToLibrary);
     $('btn-play').addEventListener('click', toggle);
-    $('stage').addEventListener('click', function (e) {
-      if (e.target.closest('#recent')) return;
-      toggle();
-    });
     $('btn-prev-sent').addEventListener('click', function () { seek(R.prevSentence(S.words, curBase())); });
     $('btn-prev-par').addEventListener('click', function () { seek(R.prevParagraph(S.words, curBase())); });
 
