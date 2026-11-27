@@ -105,13 +105,14 @@ body {
 .focus-line { width: 2px; height: 12px; background: var(--pivot); margin: 0 auto; opacity: .8; }
 /* слово НЕ анимируется на смене — это высокочастотный контент (better-motion) */
 #word {
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline;
+  position: relative; height: 1.5em; white-space: nowrap;
   font-size: var(--word-size); font-weight: 600; line-height: 1.5;
   font-family: var(--word-font);
 }
-#w-left { justify-self: end; }
-#w-pivot { color: var(--pivot); }
-#w-right { justify-self: start; }
+/* фокус-буква всегда ровно в центре экрана; половины слова расходятся от неё */
+#w-left { position: absolute; top: 0; right: calc(50% + var(--ph, 0px)); }
+#w-pivot { position: absolute; top: 0; left: 50%; transform: translateX(-50%); color: var(--pivot); }
+#w-right { position: absolute; top: 0; left: calc(50% + var(--ph, 0px)); }
 
 .controls {
   border-top: 1px solid var(--line); background: var(--surface);

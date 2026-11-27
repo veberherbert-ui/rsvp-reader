@@ -3,12 +3,13 @@
   const R = window.RsvpEngine, P = window.BookParsers, St = window.Store;
   const $ = function (id) { return document.getElementById(id); };
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const FONTS = { serif: 'Georgia, "Times New Roman", serif', sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' };
 
   const S = {
     meta: null, chapters: null, words: [], starts: [],
     idx: 0, playing: false, timer: null, nextAt: 0, wpm: 300,
     recent: [], wakeLock: null, scrubbing: false,
-    settings: { font: 40, theme: 'dark', sentence: 2.2, paragraph: 2.8, comma: 1.6, recent: true, wordfont: 'serif', smooth: 'soft' }
+    settings: { font: 40, theme: 'dark', sentence: 2.2, paragraph: 2.8, comma: 1.6, dialogue: 3.5, recent: true, wordfont: 'serif', smooth: 'soft' }
   };
 
   // ---------- настройки ----------
@@ -20,7 +21,7 @@
   function applyVisual() {
     document.body.dataset.theme = S.settings.theme;
     document.documentElement.style.setProperty('--word-size', S.settings.font + 'px');
-    document.documentElement.style.setProperty('--word-font', S.settings.wordfont === 'sans' ? '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' : 'Georgia, "Times New Roman", serif');
+    document.documentElement.style.setProperty('--word-font', FONTS[S.settings.wordfont]);
     $('recent').classList.toggle('hidden', !S.settings.recent);
   }
   function applySettings() {
@@ -34,6 +35,7 @@
     $('set-recent').checked = S.settings.recent;
     $('set-wordfont').value = S.settings.wordfont;
     $('set-smooth').value = S.settings.smooth;
+    $('set-dialogue').value = S.settings.dialogue; $('set-dialogue-label').textContent = '×' + S.settings.dialogue;
   }
 
   // ---------- тост ----------
@@ -156,10 +158,25 @@
     const w = S.words[i];
     if (!w) return;
     const t = w.t;
-    const o = R.orpIndex(t.length);
+    const o = R.pivotIndex(t);
+    const wordEl = $('word');
+    wordEl.style.fontSize = S.settings.font + 'px';
     $('w-left').textContent = t.slice(0, o);
     $('w-pivot').textContent = t[o] || '';
     $('w-right').textContent = t.slice(o + 1);
+    // авто-кегль по фактической ширине: итеративно уменьшаем, пока слово не влезет;
+    // фокус-буква остаётся ровно по центру (сетка 1fr auto 1fr)
+    let fitSize = S.settings.font;
+    for (let k = 0; k < 4; k++) {
+      void wordEl.offsetWidth;
+      const needW = $('w-left').offsetWidth + $('w-pivot').offsetWidth + $('w-right').offsetWidth;
+      const availW = wordEl.clientWidth;
+      if (needW <= availW || availW <= 0 || fitSize <= 12) break;
+      fitSize = Math.max(12, Math.floor(fitSize * availW / needW * 0.98));
+      wordEl.style.fontSize = fitSize + 'px';
+    }
+    void wordEl.offsetWidth;
+    wordEl.style.setProperty('--ph', ($('w-pivot').offsetWidth / 2) + 'px');
     if (S.playing && S.settings.smooth === 'soft' && !reduceMotion.matches && $('word').animate) {
       const d = R.delayMs(w, S.words[i + 1], S.wpm, S.settings);
       const fade = Math.max(40, Math.min(110, Math.round(d * 0.35)));
@@ -398,7 +415,7 @@
     $('set-wordfont').addEventListener('change', function (ev) {
       S.settings.wordfont = ev.target.value; St.setSetting('set:wordfont', S.settings.wordfont); applyVisual();
     });
-    [['set-sentence', 'sentence'], ['set-paragraph', 'paragraph'], ['set-comma', 'comma']].forEach(function (pair) {
+    [['set-sentence', 'sentence'], ['set-paragraph', 'paragraph'], ['set-comma', 'comma'], ['set-dialogue', 'dialogue']].forEach(function (pair) {
       $(pair[0]).addEventListener('input', function (ev) {
         S.settings[pair[1]] = +ev.target.value; St.setSetting('set:' + pair[1], S.settings[pair[1]]);
         $(pair[0] + '-label').textContent = '×' + S.settings[pair[1]];
