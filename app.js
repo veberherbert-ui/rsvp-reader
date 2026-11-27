@@ -3,6 +3,7 @@
   const R = window.RsvpEngine, P = window.BookParsers, St = window.Store;
   const $ = function (id) { return document.getElementById(id); };
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const APP_VERSION = 'v6';
   const FONTS = { serif: 'Georgia, "Times New Roman", serif', sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' };
 
   const S = {
@@ -431,6 +432,38 @@
 
     $('btn-restart').addEventListener('click', function () { seek(0); play(); });
     $('btn-to-lib').addEventListener('click', backToLibrary);
+    $('btn-update').addEventListener('click', async function () {
+      toast('Проверяю обновление…');
+      try {
+        const reg = ('serviceWorker' in navigator) ? await navigator.serviceWorker.getRegistration() : null;
+        if (!reg) { location.reload(); return; }
+        await reg.update();
+        const newer = reg.installing || reg.waiting;
+        if (newer) {
+          await new Promise(function (res) {
+            const w = reg.installing || reg.waiting;
+            if (!w || w.state === 'activated') return res();
+            w.addEventListener('statechange', function () { if (w.state === 'activated') res(); });
+            setTimeout(res, 8000);
+          });
+          location.reload();
+        } else {
+          toast('Установлена последняя версия ✓');
+        }
+      } catch (e) { location.reload(); }
+    });
+    $('btn-share').addEventListener('click', async function () {
+      const url = new URL('./', location.href).href;
+      const data = { title: 'Вспышка — скорочтение', text: 'RSVP-ридер: книги любых форматов по одному слову, с точкой фокуса. Ставится на айфон как приложение.', url: url };
+      try {
+        if (navigator.share) await navigator.share(data);
+        else throw { name: 'NoShare' };
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+        try { await navigator.clipboard.writeText(url); toast('Ссылка скопирована'); }
+        catch (e2) { toast('Ссылка: ' + url); }
+      }
+    });
     $('btn-hint-close').addEventListener('click', function () {
       $('install-hint').classList.add('hidden'); St.setSetting('hintDismissed', true);
     });
@@ -462,6 +495,7 @@
   async function init() {
     loadSettings();
     bind();
+    $('app-version').textContent = 'Вспышка ' + APP_VERSION;
     await renderLibrary();
     const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     if (ios && !navigator.standalone && !St.getSetting('hintDismissed', false)) $('install-hint').classList.remove('hidden');

@@ -205,6 +205,9 @@ input[type="range"] { accent-color: var(--solid); height: 28px; }
 #toast.show { animation: toast-in .45s var(--overshoot) both; }
 #toast.out { animation: toast-out .16s ease-out both; }
 #toast.error { border-color: var(--pivot); color: var(--pivot); }
+.settings-actions { display: flex; gap: var(--sp-3); padding: var(--sp-3); }
+.ctl.action { flex: 1; flex-direction: row; gap: var(--sp-2); font-size: 14px; min-height: 48px; }
+.version { text-align: center; padding: 0 0 var(--sp-3); opacity: .7; }
 .demo-btn { margin: 18px auto 0; flex-direction: row; font-size: 14px; gap: var(--sp-2); }
 
 /* ============ моушен ============ */
